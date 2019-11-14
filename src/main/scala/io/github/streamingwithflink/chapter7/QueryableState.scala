@@ -18,7 +18,7 @@ object TrackMaximumTemperature {
   def main(args: Array[String]) {
 
     // set up the streaming execution environment
-    val env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI()
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
 
     // checkpoint every 10 seconds
     env.getCheckpointConfig.setCheckpointInterval(10 * 1000)
@@ -61,7 +61,7 @@ object TemperatureDashboard {
   val proxyPort = 9069
   // jobId of running QueryableStateJob.
   // can be looked up in logs of running job or the web UI
-  val jobId = "d2447b1a5e0d952c372064c886d2220a"
+  val jobId = "636fdcd456fd64c5d4cbbab2248d37f7"
 
   // how many sensors to query
   val numSensors = 5
