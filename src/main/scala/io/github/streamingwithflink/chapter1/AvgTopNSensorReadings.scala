@@ -1,8 +1,10 @@
 package io.github.streamingwithflink.chapter1
 
 import java.util
-import java.util.PriorityQueue
+import java.util.Comparator
 import java.util.concurrent.ArrayBlockingQueue
+
+import scala.collection.JavaConversions._
 
 import io.github.streamingwithflink.util.{SensorReading, SensorSource, SensorTimeAssigner}
 import org.apache.flink.api.common.state.{ValueState, ValueStateDescriptor}
@@ -71,26 +73,28 @@ class AvgTopNKeyedProcessFunction(candidateNum: Int, topN: Int) extends KeyedPro
 
   def avgTopN(candidateSensorReadings: util.Queue[SensorReading], topN: Int) = {
     // 构造最大堆
-    val maxHeap = new PriorityQueue[SensorReading](topN, (i1: SensorReading, i2: SensorReading) => ((i2.temperature - i1.temperature) * 1000).toInt)
+    val topHeap = new util.TreeSet[SensorReading](new Comparator[SensorReading] {
+      override def compare(o1: SensorReading, o2: SensorReading): Int = java.lang.Double.compare(o2.temperature, o1.temperature)
+    })
 
-    candidateSensorReadings.forEach(sensorReading => {
-      // 插入元素进最大堆
-      maxHeap.offer(sensorReading)
-      // 超过topN个数则删除最大堆中的最小元素
-      if (maxHeap.size() > topN) {
-        val it = maxHeap.iterator()
-        while(it.hasNext) {
-          it.next()
+    candidateSensorReadings.forEach(x => {
+      if (topHeap.size >= topN) {
+        val min = topHeap.first
+        if (x.temperature > min.temperature) {
+          topHeap.pollFirst //舍弃
+          topHeap.add(x)
         }
-        it.remove()
+      } else {
+        topHeap.add(x)
       }
     })
 
-    maxHeap.forEach(sensorReading => {
-      println("heap >>> " + sensorReading)
+    topHeap.forEach(x => {
+      println("heap >>> " + x)
     })
 
-    val (cnt, sum) = maxHeap.toArray(new Array[SensorReading](maxHeap.size())).foldLeft((0, 0.0))((c, r) => (c._1 + 1, c._2 + r.temperature))
+    val (cnt, sum) = topHeap.foldLeft((0, 0.0))((c, r) => (c._1 + 1, c._2 + r.temperature))
+
     val avgTemp = sum / cnt
     avgTemp
   }
